@@ -1,0 +1,298 @@
+---
+title: "Aviation Traffic Analysis and Monte Carlo Numerical Integration"
+author: "Tammar Reza"
+date: "2026-04-13"
+format: html
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r}
+library(tidyverse)
+library(scales)
+
+airports <- tribble(
+  ~airport, ~year, ~passengers,
+  "ATL", 2020, 42918685,
+  "ATL", 2021, 75704760,
+  "ATL", 2022, 93699630,
+  "ATL", 2023, 104653451,
+  "ATL", 2024, 108067766,
+  "ATL", 2025, 106302208,
+  "FRA", 2020, 18768601,
+  "FRA", 2021, 24812849,
+  "FRA", 2022, 48918482,
+  "FRA", 2023, 59355389,
+  "FRA", 2024, 61564957,
+  "FRA", 2025, 63189666,
+  "PKX", 2020, 16091449,
+  "PKX", 2021, 25051012,
+  "PKX", 2022, 10277623,
+  "PKX", 2023, 39410776,
+  "PKX", 2024, 49441029,
+  "PKX", 2025, 53618949,
+  "ORD", 2020, 30860251,
+  "ORD", 2021, 54020399,
+  "ORD", 2022, 68340619,
+  "ORD", 2023, 73894226,
+  "ORD", 2024, 80043050,
+  "ORD", 2025, 84851825,
+  "JFK", 2020, 16630642,
+  "JFK", 2021, 30788322,
+  "JFK", 2022, 55287693,
+  "JFK", 2023, 62464331,
+  "JFK", 2024, 63265984,
+  "JFK", 2025, 62629455,
+  "DEN", 2020, 33741129,
+  "DEN", 2021, 58828552,
+  "DEN", 2022, 69286461,
+  "DEN", 2023, 77837917,
+  "DEN", 2024, 82358744,
+  "DEN", 2025, 82427962
+)
+
+table_data <- airports |>
+  pivot_wider(names_from = year, values_from = passengers)
+```
+
+---
+
+# Table of Passenger Counts
+
+```{r}
+table_data
+```
+
+---
+
+# Passenger Traffic Plot
+
+```{r}
+library(ggplot2)
+
+ggplot(airports, aes(x = year, y = passengers, color = airport)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = 2020:2025) +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title = "Passenger Traffic (2020–2025)",
+    x = "Year",
+    y = "Total Passengers",
+    color = "Airport"
+  ) +
+  theme_minimal(base_size = 14)
+```
+
+---
+
+Interpretation
+---
+You can see the sharp rise in numbers due to recovery from low numbers of travellers due to Covid-19 restrictions. You can also see fluctuations for a specific airport year to year and airport to airports in specific years. This shows that airport traffic varies due to many factors.*
+
+# Monte Carlo Data 
+
+```{r}
+#| label: monte-carlo-multiples
+#| fig-width: 10
+#| fig-height: 4
+
+library(tidyverse)
+
+f_mc <- function(x) -(x - 4)^2 + 4
+
+run_sim <- function(n) {
+  tibble(
+    x = runif(n, 2, 6),
+    y = runif(n, 0, 4),
+    n_label = paste0("n = ", n)
+  ) |>
+    mutate(status = ifelse(y <= f_mc(x), "on/below", "above"))
+}
+
+mc_results <- bind_rows(
+  run_sim(10),
+  run_sim(100),
+  run_sim(1000),
+  run_sim(10000)
+)
+
+ggplot() +
+  geom_function(fun = f_mc, xlim = c(2, 6), color = "black", linewidth = 1) +
+  geom_point(data = mc_results, aes(x, y, color = status), alpha = 0.5, size = 0.7) +
+  facet_wrap(
+    ~fct_relevel(n_label, "n = 10", "n = 100", "n = 1000", "n = 10000"),
+    ncol = 4
+  ) +
+  scale_color_manual(values = c("above" = "firebrick", "on/below" = "forestgreen")) +
+  labs(
+    title = "Monte Carlo Integration: Small Multiples Comparison",
+    x = "x",
+    y = "y"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+# Analysis
+
+Shows multiple graphs showing how the monte carlo data works with higher n, and how close the number is above or below the true value
+
+# Planning and Prompting GenAI tools
+
+Data Tidying and Visualization Plan
+The plan was
+
+1. Create a tribble in R. 
+2. Pivot the data wider for a table. 
+3. Plot the trends using ggplot2 with comma-formatted labels. 
+4.Hide the code in the final output but ensure it is functional."
+
+
+GenAI Prompting Results
+Prompt used (Plan-Based): > "I have a dataset of passenger traffic for six airports (ATL, FRA, PKX, ORD, JFK, DEN) from 2020-2025. Following my plan: 1. Create a tribble in R. 2. Pivot the data wider for a table. 3. Plot the trends using ggplot2 with comma-formatted labels. 4. Hide the code in the final output but ensure it is functional."
+
+Result: The tool (Gemini) provided the R code used in Section 1 of this report. It correctly interpreted the pivot_wider requirement and used scales for the formatting.
+
+Comparison of Plan-Based vs. Generic Prompting
+Generic Prompt Result : The generic prompt ("Analyze this airport data in R") produced a basic plot without proper formatting like label_comma or organized "Small Multiples," often leaving the data in a long format that is harder to read in a summary table. It also produced broken code, that took multiple prompts to repair
+
+Comparison Narrative:
+The plan-based prompt resulted in a much more "presentation-ready" document. By specifically naming the functions (pivot_wider, label_comma) and the structure (Table vs. Plot), the output required zero manual fixing. In contrast, the generic prompt output usually requires multiple follow-up questions to fix axis labels, handle the data structure, or hide the code chunks.
+
+The primary difference is the output, plan-based approach ensures the AI understands the intended final product, on the other hand the generic prompt doesn’t understand fully, creating a less professional and complete document
+
+
+
+# Reflection
+Things I learned in this course
+1. How to use quarto to format documents with datasets and R code
+2. How to use R code with raw datasets to visualize it with graphs
+
+
+
+# Code Appendix Aiports
+
+```{r}
+#| echo: true
+#| warning: false
+#| message: false
+
+
+library(tidyverse)
+
+airports <- tribble(
+  ~airport, ~year, ~passengers,
+  
+  "ATL", 2020, 42918685,
+  "ATL", 2021, 75704760,
+  "ATL", 2022, 93699630,
+  "ATL", 2023, 104653451,
+  "ATL", 2024, 108067766,
+  "ATL", 2025, 106302208,
+
+  "FRA", 2020, 18768601,
+  "FRA", 2021, 24812849,
+  "FRA", 2022, 48918482,
+  "FRA", 2023, 59355389,
+  "FRA", 2024, 61564957,
+  "FRA", 2025, 63189666,
+
+  "PKX", 2020, 16091449,
+  "PKX", 2021, 25051012,
+  "PKX", 2022, 10277623,
+  "PKX", 2023, 39410776,
+  "PKX", 2024, 49441029,
+  "PKX", 2025, 53618949,
+
+  "ORD", 2020, 30860251,
+  "ORD", 2021, 54020399,
+  "ORD", 2022, 68340619,
+  "ORD", 2023, 73894226,
+  "ORD", 2024, 80043050,
+  "ORD", 2025, 84851825,
+
+  "JFK", 2020, 16630642,
+  "JFK", 2021, 30788322,
+  "JFK", 2022, 55287693,
+  "JFK", 2023, 62464331,
+  "JFK", 2024, 63265984,
+  "JFK", 2025, 62629455,
+
+  "DEN", 2020, 33741129,
+  "DEN", 2021, 58828552,
+  "DEN", 2022, 69286461,
+  "DEN", 2023, 77837917,
+  "DEN", 2024, 82358744,
+  "DEN", 2025, 82427962
+)
+
+airports
+
+table_data <- airports |>
+  pivot_wider(
+    names_from = year,
+    values_from = passengers
+  )
+
+table_data
+
+
+ggplot(airports, aes(x = year, y = passengers, color = airport)) +
+  geom_line(linewidth = 1.2) +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = 2020:2025) +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title = "Passenger Traffic (2020–2025)",
+    x = "Year",
+    y = "Total Passengers",
+    color = "Airport"
+  ) +
+  theme_minimal(base_size = 14)
+
+```
+
+# Code Appendix Monte Carlo
+
+```{r}
+#| echo: true
+#| warning: false
+#| message: false
+
+
+f_mc <- function(x) -(x - 4)^2 + 4
+
+run_sim <- function(n) {
+  tibble(
+    x = runif(n, 2, 6),
+    y = runif(n, 0, 4),
+    n_label = paste0("n = ", n)
+  ) |> 
+    mutate(status = ifelse(y <= f_mc(x), "on/below", "above"))
+}
+
+mc_results <- bind_rows(run_sim(10), run_sim(100), run_sim(1000), run_sim(10000))
+
+ggplot() +
+  geom_function(fun = f_mc, xlim = c(2, 6), color = "black", linewidth = 1) +
+  geom_point(data = mc_results, aes(x, y, color = status), alpha = 0.5, size = 0.7) +
+  facet_wrap(~fct_relevel(n_label, "n = 10", "n = 100", "n = 1000"), ncol = 4) +
+  scale_color_manual(values = c("above" = "firebrick", "on/below" = "forestgreen")) +
+  theme_minimal()
+
+```
+
+
+# Apendix GenAI Usage
+1. Used Google Gemini Free Version
+2. Used it 4/15/26
+4. Prompt ""I have a dataset of passenger traffic for six airports (ATL, FRA, PKX, ORD, JFK, DEN) from 2020-2025. Following my plan: 1. Create a tribble in R. 2. Pivot the data wider for a table. 3. Plot the trends using ggplot2 with comma-formatted labels. 4. Hide the code in the final output but ensure it is functional." 
+Then I pasted the whole section of airport code in for reference
+5. Response from AI was:
+To help you meet the assignment requirements, I have refined your code based on the plan-based prompt you provided. I noticed that in your previous version, the data was being displayed in its raw format and the plot lacked standard formatting for large numbers.
+
+I have updated the code to ensure the data is tidied into a wide format for the table and that the visualization uses comma-formatted labels for professional readability. I have also added the Monte Carlo simulation using a faceted "small multiples" approach as requested.
+
+Here is the complete .qmd file content. You can copy this entire block into VS Code.
